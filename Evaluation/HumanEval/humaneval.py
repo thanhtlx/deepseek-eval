@@ -69,6 +69,8 @@ class HumanEval:
         log_file = os.path.join(self.log_dir,f'{self.model_name}{self.language}')
         tmpfile = open(log_file, "w")
         start_time = time.time()
+        device = 'cuda' 
+        gpt = gpt.to(device)
         # split the dataset into batches and construct a list of inputs
         # for idx in range(0, len(indices), self.batch_size):
         for idx in range(0, len(dataset)):
@@ -79,7 +81,7 @@ class HumanEval:
             taskid = []
             # get the prompts from the dataset
             # for j in indices[idx:idx + self.batch_size]:
-            device = 'cuda'
+            
             if idx > -1: #joke
                 j = idx
                 data = dataset[j]
