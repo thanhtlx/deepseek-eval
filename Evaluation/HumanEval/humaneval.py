@@ -52,31 +52,36 @@ class HumanEval:
         """
         assert self.log_dir is not None, "log_dir should not be None when evaluating humaneval"
         dataset = HumanEvalDataset(self.data_root, sample_num=self.n_sample, language=self.language, issft=self.sft)
-        nprompt = len(dataset) // self.n_sample
-        dp_rank = accelerator.process_index 
-        dp_size = accelerator.num_processes 
-        if self.k > 1:
-            assert self.n_sample >= 100, "HumanEval PASS@100 needs n_sample >= 100"
+        # nprompt = len(dataset) // self.n_sample
+        # dp_rank = accelerator.process_index 
+        # dp_size = accelerator.num_processes 
+        # if self.k > 1:
+        #     assert self.n_sample >= 100, "HumanEval PASS@100 needs n_sample >= 100"
         gpt.eval()
         # each process will process a subset of the dataset
-        prompt_indices_split = np.array_split(range(nprompt), dp_size)
-        prompt_indices = prompt_indices_split[dp_rank]
-        indices = [x * self.n_sample + j for x in prompt_indices for j in range(self.n_sample)]
-        all_num = len(indices) 
+        # prompt_indices_split = np.array_split(range(nprompt), dp_size)
+        # prompt_indices = prompt_indices_split[dp_rank]
+        # indices = [x * self.n_sample + j for x in prompt_indices for j in range(self.n_sample)]
+        # all_num = len(indices) 
         processed_num = 0
-        log_file = os.path.join(self.log_dir,
-                                    f'{self.model_name}_rank{dp_rank}_bs{self.batch_size}_shot_log_{self.language}.json')
+        # log_file = os.path.join(self.log_dir,
+        #                             f'{self.model_name}_rank{dp_rank}_bs{self.batch_size}_shot_log_{self.language}.json')
+        log_file = os.path.join(self.log_dir,f'{self.model_name}{self.language}')
         tmpfile = open(log_file, "w")
         start_time = time.time()
         # split the dataset into batches and construct a list of inputs
-        for idx in range(0, len(indices), self.batch_size):
+        # for idx in range(0, len(indices), self.batch_size):
+        for idx in range(0, len(dataset)):
             prompt_list = []
             prompt_lens = []
             orriginal_prompt_list = []
             tokenized_prompt_lens = []
             taskid = []
             # get the prompts from the dataset
-            for j in indices[idx:idx + self.batch_size]:
+            # for j in indices[idx:idx + self.batch_size]:
+            device = 'cuda'
+            if idx > -1: #joke
+                j = idx
                 data = dataset[j]
                 fprompt = data["prompt"].strip()
                 prompt_list.append(fprompt)
@@ -85,7 +90,8 @@ class HumanEval:
                 prompt_lens.append(len(fprompt))
                 tokenized_prompt_lens.append(tmp)
                 taskid.append(data["task_id"])
-            input_ids = torch.tensor(tokenized_prompt_lens).to(accelerator.device)
+            # input_ids = torch.tensor(tokenized_prompt_lens).to(accelerator.device)
+            input_ids = torch.tensor(tokenized_prompt_lens).to(device)
             # generate the code
             if self.temperature != 0:       
                 decoded = gpt.generate(
@@ -118,12 +124,12 @@ class HumanEval:
                 tmpfile.write(json.dumps(res) + "\n")
                 tmpfile.flush()
                 processed_num += 1
-            self.log_score(dp_rank, processed_num, all_num, start_time, self.batch_size)
+            # self.log_score(dp_rank, processed_num, all_num, start_time, self.batch_size)
         tmpfile.close()        
-        accelerator.wait_for_everyone()
+        # accelerator.wait_for_everyone()
         # calculate the final score of pass@k
         self._calculate_final_score(accelerator)
-        accelerator.wait_for_everyone()
+        # accelerator.wait_for_everyone()
         return
     
     def log_score(self, dp_rank, processed_num, all_num, start_time, bs):
@@ -146,10 +152,12 @@ class HumanEval:
         """
         Calculate the final score.
         """
-        if accelerator.is_local_main_process:
+        # if accelerator.is_local_main_process:
+        if True:
             logfilepath = os.path.join(self.log_dir, f'final_{self.model_name}.jsonl')
             logfile = open(logfilepath, "w")
-            for i in range(accelerator.num_processes):
+            # for i in range(accelerator.num_processes):
+            for i in range(1):
                 tmplogfile = os.path.join(self.log_dir, f'{self.model_name}_rank{i}_bs{self.batch_size}_shot_log_{self.language}.json')
                 logfile.write(open(tmplogfile).read().strip() + "\n")
                 os.remove(tmplogfile)
