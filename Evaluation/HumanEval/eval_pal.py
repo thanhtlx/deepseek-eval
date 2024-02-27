@@ -16,7 +16,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 
 if __name__ == '__main__':
     kwargs_handlers = [DistributedDataParallelKwargs(find_unused_parameters=True)]
-    accelerator = Accelerator(mixed_precision="bf16", kwargs_handlers=kwargs_handlers)   
+    accelerator = Accelerator(mixed_precision="fp16", kwargs_handlers=kwargs_handlers)   
 
 
     parser = ArgumentParser()
