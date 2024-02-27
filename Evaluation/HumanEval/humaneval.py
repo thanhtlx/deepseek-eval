@@ -30,7 +30,7 @@ class HumanEval:
         self.k = k_sample
         self.n_sample = n_sample
         self.language = language
-        self.log_dir = log_dir
+        self.log_dir = 'log_dir'
         self.sft = issft
         self.temperature = temperature
         self.top_p = top_p
@@ -39,6 +39,7 @@ class HumanEval:
         os.makedirs(self.log_dir, exist_ok=True)
         tokenizer_cls = tokenizer_cfg.pop('cls')
         try:
+            
             self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_cfg.pop("model_path"), trust_remote_code=True)       
         except Exception as e:
             print(e)
