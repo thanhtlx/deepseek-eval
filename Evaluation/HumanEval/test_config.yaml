@@ -1,4 +1,5 @@
 compute_environment: LOCAL_MACHINE
+distributed_type: MULTI_GPU
 downcast_bf16: 'no'
 gpu_ids: 0
 machine_rank: 0
