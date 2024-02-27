@@ -280,7 +280,7 @@ def evaluate_functional_correctness(
     # Calculate pass@k.
     total, correct = [], []
     with open('result.json','w+') as ff:
-        json.dump(result,ff)
+        json.dump(results,ff)
     for result in results.values():
         passed = [r[1]["passed"] for r in result]
         total.append(len(passed))

@@ -167,6 +167,9 @@ class HumanEval:
             timeout = 10
             runlang = self.language
             res = evaluate_functional_correctness(input_file=logfilepath, problem_file=os.path.join(self.data_root, f"humaneval-{self.language}.jsonl"), tmp_dir=self.log_dir, timeout=timeout, language=runlang)
+            # log_file = os.path.join(self.log_dir,f'{self.model_name}{self.language}')
+            # logfilepath = os.path.join(self.log_dir, f'final_{self.model_name}.jsonl')
+            # os.path.join(self.data_root, f"humaneval-{self.language}.jsonl")
             print("score is", res['pass@%d' % self.k])
             os.remove(logfilepath)
         return
