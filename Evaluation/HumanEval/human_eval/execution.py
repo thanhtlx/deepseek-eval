@@ -508,7 +508,7 @@ def check_correctness(
             compile_returncode = -1
             for _ in range(5):
                 try:
-                    cmd = f"{java_exec}javac -cp javatuples-1.2.jar Problem.java"
+                    cmd = f"{java_exec}java -cp javatuples-1.2.jar Problem.java"
                     compilation_result = subprocess.run(cmd, timeout=60, capture_output=True, shell=True)  
                     compile_returncode = compilation_result.returncode
                     break
