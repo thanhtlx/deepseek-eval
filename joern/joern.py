@@ -28,7 +28,7 @@ def run_joern_text(function_text, output_dir, lang='java',fileName = ""):
     mkdir_if_not_exist(output_dir)
     logger.info(f"Exporting joern graph [{output_dir}]")
     params = f"filepath={tmp_file},outputDir={output_dir},workspaceName={workspace_name}"
-    command = f"/c/Users/se/bin/joern/joern-cli/joern.bat --script {JOERN_SCRIPT_FUNCTION_PATH} --params='{params}'"
+    command = f"joern --script {JOERN_SCRIPT_FUNCTION_PATH} --params='{params}'"
     print(command)
     logger.debug(command)
     stdout, stderr = subprocess_cmd(command)
