@@ -19,6 +19,7 @@ tsc_exec = ""
 go_exec = ""
 php_exec = ""
 cs_exec = ""
+import py_compile
 
 def check_correctness(
         task_id: str,
@@ -204,7 +205,136 @@ def check_correctness(
         "result"       : result[0],
         "passed"       : result[0] == "passed",
         "finish"       : -1 if "finish" not in sample else sample["finish"],
-        "code"         : sample["test_code"]
+        "code"         : sample["test_code"], 
+        
+    }
+
+
+def check_compile(
+        task_id: str,
+        sample: dict,
+        language_type: str,
+        timeout: float = 3.0,
+        tmp_dir: str = None,
+        completion_id: Optional[int] = None,
+) -> Dict:
+    """
+    Evaluates the functional correctness of a completion by running the test
+    suite provided in the problem.
+    """
+
+    def unsafe_execute(tmp_dir):
+        random_id = random.randint(1, 100000)
+        if "python" in language_type.lower():
+            with create_tempdir():
+
+                # These system calls are needed when cleaning up tempdir.
+                import os
+                import shutil
+                rmtree = shutil.rmtree
+                rmdir = os.rmdir
+                chdir = os.chdir
+
+                # Disable functionalities that can make destructive changes to the test.
+                reliability_guard()
+
+                try:
+                    exec_globals = {}
+                    with swallow_io():
+
+                        exec(sample["test_code"], exec_globals)
+                        result.append("passed")
+                except TimeoutException:
+                    result.append("timed out")
+                except AssertionError as e:
+                    result.append(f"failed: AssertionError")
+                except BaseException as e:
+                    result.append(f"failed: {e}")
+                #print(sample["test_code"])
+                #print(result)
+                # Needed for cleaning up.
+                shutil.rmtree = rmtree
+                os.rmdir = rmdir
+                os.chdir = chdir
+        elif "java" in language_type.lower():
+            assert tmp_dir is not None, "Java should be evaluated in a temporary dir."
+
+            import os
+            import shutil
+
+            if "tmp" not in tmp_dir:
+                tmp_dir = os.path.join(tmp_dir, "tmp")
+            tmp_dir = os.path.join(tmp_dir, f"{task_id.replace('/', '-')}-{random_id}")
+            if not os.path.exists(tmp_dir):
+                os.makedirs(tmp_dir)
+            open(os.path.join(tmp_dir, "Problem.java"), 'w').write(sample["test_code"])
+            origin_path = os.getcwd()
+            os.system(f"cp ./javatuples-1.2.jar {tmp_dir}/")
+            os.chdir(tmp_dir)
+            res = "failed: unknown error"
+            compile_returncode = -1
+            for _ in range(5):
+                try:
+                    cmd = f"{java_exec}javac -cp javatuples-1.2.jar Problem.java"
+                    compilation_result = subprocess.run(cmd, timeout=60, capture_output=True, shell=True)  
+                    compile_returncode = compilation_result.returncode
+                    break
+                except subprocess.TimeoutExpired as e:
+                    continue
+            if compile_returncode != 0:
+                res = "failed: compilation error"
+            else:
+                exec_result = None
+                try:
+                    # WARNING
+                    # This program exists to execute untrusted model-generated code. Although
+                    # it is highly unlikely that model-generated code will do something overtly
+                    # malicious in response to this test suite, model-generated code may act
+                    # destructively due to a lack of model capability or alignment.
+                    # Users are strongly encouraged to sandbox this evaluation suite so that it
+                    # does not perform destructive actions on their host or network.
+                    # Once you have read this disclaimer and taken appropriate precautions,
+                    # uncomment the following line and proceed at your own risk:
+                    # cmd = f"{java_exec}java -ea -cp .:javatuples-1.2.jar Problem"
+                    # fix for windows
+                    cmd = f"{java_exec}java -ea Problem"
+                    exec_result = subprocess.run(cmd, timeout=timeout, capture_output=True, shell=True)  
+                    if exec_result.returncode == 0:
+                        res = "passed"
+                    elif exec_result.returncode == 1:
+                        if "AssertionError" in exec_result.stderr.decode('unicode-escape'):
+                            res = "failed: wrong answer"
+                        else:
+                            res = f"failed: {exec_result.stderr.decode()}"
+                except subprocess.TimeoutExpired as e:
+                    res = "time out"
+                except BaseException as e:
+                    res = f"failed: {e}"
+
+            result.append(res)  
+            os.chdir(origin_path)          
+            shutil.rmtree(tmp_dir)
+        
+    manager = mp.Manager()
+    result = manager.list()
+
+    p = mp.Process(target=unsafe_execute, args=(tmp_dir,))
+    p.start()
+    p.join(timeout=timeout + 1)
+    if p.is_alive():
+        p.kill()
+
+    if not result:
+        result.append("timed out")
+
+    return {
+        "task_id"      : task_id,
+        "completion_id": completion_id,
+        "result"       : result[0],
+        "passed"       : result[0] == "passed",
+        "finish"       : -1 if "finish" not in sample else sample["finish"],
+        "code"         : sample["test_code"], 
+        
     }
 
 # Copyright (c) OpenAI (https://openai.com)

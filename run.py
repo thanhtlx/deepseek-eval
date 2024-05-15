@@ -5,7 +5,7 @@ import os
 # os.chdir('Evaluation/HumanEval/')
 from Evaluation.HumanEval.human_eval.evaluation import evaluate_functional_correctness
 
-language = 'python'
+language = 'java'
 log_dir='tmp_dir'
 runlang=language
 timeout = 100
